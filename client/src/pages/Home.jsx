@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { AvatarOrbit, CornerDecor, HeroBackdrop, ProjectArt, WaveDivider } from '../components/Graphics.jsx';
+import Reveal, { useActiveSection, useScrolled } from '../components/Reveal.jsx';
+
+const STAGGER = 90; // ms between siblings
 
 function formatMonth(value) {
   const match = /^(\d{4})-(\d{2})$/.exec(value || '');
@@ -34,10 +37,19 @@ function Hero({ profile }) {
       <HeroBackdrop />
       <section className="hero container">
         <div className="hero-text">
-          <p className="eyebrow">{profile.title}</p>
-          <h1>{profile.name}</h1>
-          {profile.tagline && <p className="lead">{profile.tagline}</p>}
-          <div className="actions">
+          <Reveal as="p" className="eyebrow" delay={0}>
+            {profile.title}
+          </Reveal>
+          {/* Gradient lives on the span: background-clip:text vanishes in Chromium when the same element animates */}
+          <Reveal as="h1" delay={STAGGER}>
+            <span className="grad-text">{profile.name}</span>
+          </Reveal>
+          {profile.tagline && (
+            <Reveal as="p" className="lead" delay={STAGGER * 2}>
+              {profile.tagline}
+            </Reveal>
+          )}
+          <Reveal className="actions" delay={STAGGER * 3}>
             <a className="btn btn-primary" href="#projects">
               View projects
             </a>
@@ -47,19 +59,19 @@ function Hero({ profile }) {
             <a className="btn" href="#contact">
               Contact me
             </a>
-          </div>
-          <div className="socials">
+          </Reveal>
+          <Reveal className="socials" variant="fade" delay={STAGGER * 4}>
             <ExternalLink href={profile.github_url}>GitHub</ExternalLink>
             <ExternalLink href={profile.linkedin_url}>LinkedIn</ExternalLink>
             {profile.email && <a href={`mailto:${profile.email}`}>{profile.email}</a>}
-          </div>
+          </Reveal>
         </div>
-        <div className="avatar-wrap">
+        <Reveal className="avatar-wrap" variant="scale" delay={STAGGER * 2}>
           <AvatarOrbit />
           <div className="avatar" aria-hidden={!profile.avatar_url}>
             {profile.avatar_url ? <img src={profile.avatar_url} alt={profile.name} /> : <span>{initials(profile.name)}</span>}
           </div>
-        </div>
+        </Reveal>
       </section>
       <WaveDivider />
     </div>
@@ -80,24 +92,26 @@ function About({ profile, skills }) {
   return (
     <section id="about" className="section container">
       <CornerDecor />
-      <h2>About</h2>
+      <Reveal as="h2">About</Reveal>
       <div className="about-grid">
-        <div className="bio">
+        <Reveal className="bio" variant="left" delay={STAGGER}>
           {profile.bio.split(/\n\s*\n/).map((para, i) => (
             <p key={i}>{para}</p>
           ))}
           {profile.location && <p className="muted">📍 {profile.location}</p>}
-        </div>
+        </Reveal>
         <div className="skills">
-          {groups.map(([category, names]) => (
-            <div key={category} className="skill-group">
+          {groups.map(([category, names], g) => (
+            <Reveal key={category} className="skill-group" delay={STAGGER * (g + 1)}>
               <h3>{category}</h3>
               <ul className="tags">
-                {names.map((n) => (
-                  <li key={n}>{n}</li>
+                {names.map((n, i) => (
+                  <li key={n} style={{ '--i': i }}>
+                    {n}
+                  </li>
                 ))}
               </ul>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -116,9 +130,9 @@ function Projects({ projects }) {
 
   return (
     <section id="projects" className="section container">
-      <h2>Projects</h2>
+      <Reveal as="h2">Projects</Reveal>
       {allTech.length > 1 && (
-        <div className="filters" role="group" aria-label="Filter projects by technology">
+        <Reveal className="filters" variant="fade" delay={STAGGER} role="group" aria-label="Filter projects by technology">
           <button className={`chip ${filter === null ? 'active' : ''}`} onClick={() => setFilter(null)}>
             All
           </button>
@@ -127,11 +141,12 @@ function Projects({ projects }) {
               {t}
             </button>
           ))}
-        </div>
+        </Reveal>
       )}
-      <div className="project-grid">
-        {visible.map((p) => (
-          <article key={p.id} className="card project">
+      {/* Keyed by filter so the cards re-play their entrance whenever the filter changes */}
+      <div className="project-grid" key={filter ?? 'all'}>
+        {visible.map((p, i) => (
+          <Reveal as="article" key={p.id} className="card project" variant="scale" delay={Math.min(i, 5) * STAGGER}>
             {p.image_url ? (
               <img className="project-img" src={p.image_url} alt="" loading="lazy" />
             ) : (
@@ -159,7 +174,7 @@ function Projects({ projects }) {
                 <ExternalLink href={p.repo_url}>Source ↗</ExternalLink>
               </div>
             </div>
-          </article>
+          </Reveal>
         ))}
       </div>
       {visible.length === 0 && <p className="muted">No projects use {filter}.</p>}
@@ -171,10 +186,10 @@ function Experience({ items }) {
   if (items.length === 0) return null;
   return (
     <section id="experience" className="section container">
-      <h2>Experience</h2>
+      <Reveal as="h2">Experience</Reveal>
       <ol className="timeline">
-        {items.map((job) => (
-          <li key={job.id}>
+        {items.map((job, i) => (
+          <Reveal as="li" key={job.id} variant="left" delay={Math.min(i, 5) * STAGGER}>
             <div className="timeline-date">
               {formatMonth(job.start_date)} – {job.end_date ? formatMonth(job.end_date) : 'Present'}
             </div>
@@ -185,7 +200,7 @@ function Experience({ items }) {
               {job.location && <p className="muted small-text">{job.location}</p>}
               {job.description && <p>{job.description}</p>}
             </div>
-          </li>
+          </Reveal>
         ))}
       </ol>
     </section>
@@ -216,9 +231,11 @@ function Contact() {
   return (
     <section id="contact" className="section container narrow">
       <CornerDecor className="flip" />
-      <h2>Get in touch</h2>
-      <p className="muted">Have a role, project or question? Send a message and I'll get back to you.</p>
-      <form className="card form" onSubmit={submit} noValidate>
+      <Reveal as="h2">Get in touch</Reveal>
+      <Reveal as="p" className="muted" variant="fade" delay={STAGGER}>
+        Have a role, project or question? Send a message and I'll get back to you.
+      </Reveal>
+      <Reveal as="form" className="card form" variant="scale" delay={STAGGER * 2} onSubmit={submit} noValidate>
         <div className="row">
           <label>
             Name
@@ -243,9 +260,9 @@ function Contact() {
         <button className="btn btn-primary" disabled={status.state === 'sending'}>
           {status.state === 'sending' ? 'Sending…' : 'Send message'}
         </button>
-        {status.state === 'sent' && <p className="notice success">Thanks! Your message was sent.</p>}
-        {status.state === 'error' && <p className="notice error">{status.message}</p>}
-      </form>
+        {status.state === 'sent' && <p className="notice success pop">Thanks! Your message was sent.</p>}
+        {status.state === 'error' && <p className="notice error pop">{status.message}</p>}
+      </Reveal>
     </section>
   );
 }
@@ -253,6 +270,10 @@ function Contact() {
 export default function Home() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const scrolled = useScrolled();
+
+  const sections = data ? ['about', 'projects', ...(data.experience.length ? ['experience'] : []), 'contact'] : [];
+  const active = useActiveSection(sections);
 
   useEffect(() => {
     api('/portfolio')
@@ -267,18 +288,24 @@ export default function Home() {
   if (!data) return <div className="center-screen muted">Loading…</div>;
 
   const { profile, projects, experience, skills } = data;
+  const navLink = (id, label) => (
+    <a href={`#${id}`} className={active === id ? 'active' : undefined} aria-current={active === id ? 'true' : undefined}>
+      {label}
+    </a>
+  );
+
   return (
     <>
-      <header className="nav">
+      <header className={`nav${scrolled ? ' scrolled' : ''}`}>
         <div className="container nav-inner">
           <a href="#top" className="brand">
             {profile.name}
           </a>
           <nav>
-            <a href="#about">About</a>
-            <a href="#projects">Projects</a>
-            {experience.length > 0 && <a href="#experience">Experience</a>}
-            <a href="#contact">Contact</a>
+            {navLink('about', 'About')}
+            {navLink('projects', 'Projects')}
+            {experience.length > 0 && navLink('experience', 'Experience')}
+            {navLink('contact', 'Contact')}
           </nav>
         </div>
       </header>
@@ -289,14 +316,14 @@ export default function Home() {
         <Experience items={experience} />
         <Contact />
       </main>
-      <footer className="footer container">
+      <Reveal as="footer" className="footer container" variant="fade">
         <span>
           © {new Date().getFullYear()} {profile.name}
         </span>
         <Link to="/admin" className="muted">
           Admin
         </Link>
-      </footer>
+      </Reveal>
     </>
   );
 }

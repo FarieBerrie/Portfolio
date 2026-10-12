@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, auth } from '../api.js';
 import { HeroBackdrop } from '../components/Graphics.jsx';
+import Reveal from '../components/Reveal.jsx';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export default function Login() {
   return (
     <div className="center-screen backdrop-screen">
       <HeroBackdrop />
-      <form className="card form login" onSubmit={submit}>
+      <Reveal as="form" className="card form login" variant="scale" onSubmit={submit}>
         <h1>Admin sign in</h1>
         <label>
           Email
@@ -56,7 +57,7 @@ export default function Login() {
         <Link to="/" className="muted small-text">
           ← Back to site
         </Link>
-      </form>
+      </Reveal>
     </div>
   );
 }
