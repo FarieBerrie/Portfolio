@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, auth } from '../api.js';
+import { HeroBackdrop } from '../components/Graphics.jsx';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -23,7 +24,8 @@ export default function Login() {
   }
 
   return (
-    <div className="center-screen">
+    <div className="center-screen backdrop-screen">
+      <HeroBackdrop />
       <form className="card form login" onSubmit={submit}>
         <h1>Admin sign in</h1>
         <label>

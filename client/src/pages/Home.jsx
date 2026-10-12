@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
+import { AvatarOrbit, CornerDecor, HeroBackdrop, ProjectArt, WaveDivider } from '../components/Graphics.jsx';
 
 function formatMonth(value) {
   const match = /^(\d{4})-(\d{2})$/.exec(value || '');
@@ -29,32 +30,39 @@ function ExternalLink({ href, children, className }) {
 
 function Hero({ profile }) {
   return (
-    <section className="hero container">
-      <div className="hero-text">
-        <p className="eyebrow">{profile.title}</p>
-        <h1>{profile.name}</h1>
-        {profile.tagline && <p className="lead">{profile.tagline}</p>}
-        <div className="actions">
-          <a className="btn btn-primary" href="#projects">
-            View projects
-          </a>
-          <ExternalLink className="btn" href={profile.resume_url}>
-            Résumé
-          </ExternalLink>
-          <a className="btn" href="#contact">
-            Contact me
-          </a>
+    <div className="hero-wrap">
+      <HeroBackdrop />
+      <section className="hero container">
+        <div className="hero-text">
+          <p className="eyebrow">{profile.title}</p>
+          <h1>{profile.name}</h1>
+          {profile.tagline && <p className="lead">{profile.tagline}</p>}
+          <div className="actions">
+            <a className="btn btn-primary" href="#projects">
+              View projects
+            </a>
+            <ExternalLink className="btn" href={profile.resume_url}>
+              Résumé
+            </ExternalLink>
+            <a className="btn" href="#contact">
+              Contact me
+            </a>
+          </div>
+          <div className="socials">
+            <ExternalLink href={profile.github_url}>GitHub</ExternalLink>
+            <ExternalLink href={profile.linkedin_url}>LinkedIn</ExternalLink>
+            {profile.email && <a href={`mailto:${profile.email}`}>{profile.email}</a>}
+          </div>
         </div>
-        <div className="socials">
-          <ExternalLink href={profile.github_url}>GitHub</ExternalLink>
-          <ExternalLink href={profile.linkedin_url}>LinkedIn</ExternalLink>
-          {profile.email && <a href={`mailto:${profile.email}`}>{profile.email}</a>}
+        <div className="avatar-wrap">
+          <AvatarOrbit />
+          <div className="avatar" aria-hidden={!profile.avatar_url}>
+            {profile.avatar_url ? <img src={profile.avatar_url} alt={profile.name} /> : <span>{initials(profile.name)}</span>}
+          </div>
         </div>
-      </div>
-      <div className="avatar" aria-hidden={!profile.avatar_url}>
-        {profile.avatar_url ? <img src={profile.avatar_url} alt={profile.name} /> : <span>{initials(profile.name)}</span>}
-      </div>
-    </section>
+      </section>
+      <WaveDivider />
+    </div>
   );
 }
 
@@ -71,6 +79,7 @@ function About({ profile, skills }) {
 
   return (
     <section id="about" className="section container">
+      <CornerDecor />
       <h2>About</h2>
       <div className="about-grid">
         <div className="bio">
@@ -123,7 +132,11 @@ function Projects({ projects }) {
       <div className="project-grid">
         {visible.map((p) => (
           <article key={p.id} className="card project">
-            {p.image_url && <img className="project-img" src={p.image_url} alt="" loading="lazy" />}
+            {p.image_url ? (
+              <img className="project-img" src={p.image_url} alt="" loading="lazy" />
+            ) : (
+              <ProjectArt seed={p.title} />
+            )}
             <div className="card-body">
               <div className="project-head">
                 <h3>{p.title}</h3>
@@ -202,6 +215,7 @@ function Contact() {
 
   return (
     <section id="contact" className="section container narrow">
+      <CornerDecor className="flip" />
       <h2>Get in touch</h2>
       <p className="muted">Have a role, project or question? Send a message and I'll get back to you.</p>
       <form className="card form" onSubmit={submit} noValidate>
