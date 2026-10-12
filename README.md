@@ -78,8 +78,14 @@ Validation failures return `400 { error, fields: { fieldName: "message" } }`.
 
 The app runs as a single Node process, so any host that runs Node and keeps a persistent disk for the SQLite file will work, for example Render, Railway, Fly.io or a small VPS.
 
+### Render (one click)
+
+[`render.yaml`](render.yaml) is a Render Blueprint that sets the build, start command, environment and a 1 GB disk for the database. In the Render dashboard choose **New → Blueprint**, pick this repo, and enter `ADMIN_EMAIL` and `ADMIN_PASSWORD` when asked. `JWT_SECRET` is generated for you. It uses the paid Starter instance, because Render's free instances can't have a disk.
+
+### Anywhere else
+
 ```bash
-npm install && npm run build
+npm install --include=dev && npm run build
 NODE_ENV=production JWT_SECRET=... ADMIN_EMAIL=... ADMIN_PASSWORD=... npm start
 ```
 

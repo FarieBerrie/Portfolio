@@ -1,0 +1,29 @@
+# Render Blueprint: in the Render dashboard choose New → Blueprint and select this repo.
+# You'll be prompted for ADMIN_EMAIL and ADMIN_PASSWORD; everything else is set here.
+services:
+  - type: web
+    name: portfolio
+    runtime: node
+    plan: starter # a persistent disk requires a paid instance; free instances lose the SQLite file on every deploy
+    branch: main
+    # --include=dev: Vite is a devDependency and must be installed to build the client.
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_FILE
+        value: /var/data/portfolio.db
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
