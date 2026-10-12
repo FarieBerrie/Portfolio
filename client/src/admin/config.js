@@ -22,14 +22,34 @@ export const resourceForms = {
     subtitle: (r) => [r.featured && '★ Featured', r.tech.join(', ')].filter(Boolean).join(' · '),
     fields: [
       { name: 'title', label: 'Title', required: true, wide: true },
-      { name: 'summary', label: 'One-line summary', wide: true },
-      { name: 'description', label: 'Details', kind: 'textarea', rows: 5, wide: true },
+      { name: 'summary', label: 'One-line summary (shown on the card)', wide: true },
+      { name: 'role', label: 'Your role', placeholder: 'Lead developer' },
+      { name: 'year', label: 'Year', placeholder: '2025' },
+      {
+        name: 'description',
+        label: 'Case study. Blank line = new paragraph; start one with "The problem:" to give it a heading',
+        kind: 'textarea',
+        rows: 9,
+        wide: true,
+      },
       { name: 'tech', label: 'Tech stack (comma-separated)', kind: 'list', wide: true },
       { name: 'live_url', label: 'Live demo URL', kind: 'url' },
       { name: 'repo_url', label: 'Repository URL', kind: 'url' },
-      { name: 'image_url', label: 'Screenshot URL', kind: 'url' },
+      { name: 'image_url', label: 'Cover screenshot URL', kind: 'url', wide: true },
+      { name: 'gallery', label: 'More screenshots (one URL per line)', kind: 'lines', rows: 4, wide: true },
       { name: 'sort_order', label: 'Sort order', kind: 'number' },
       { name: 'featured', label: 'Featured project', kind: 'checkbox' },
+    ],
+  },
+  stats: {
+    label: 'Stats',
+    singular: 'stat',
+    title: (r) => `${r.value} ${r.label}`,
+    subtitle: () => 'Shown in the row under the hero',
+    fields: [
+      { name: 'value', label: 'Value (numbers count up)', required: true, placeholder: '3+' },
+      { name: 'label', label: 'Label', required: true, placeholder: 'Years of experience' },
+      { name: 'sort_order', label: 'Sort order', kind: 'number' },
     ],
   },
   experience: {
@@ -65,6 +85,7 @@ export function toFormValues(fields, row = {}) {
   for (const f of fields) {
     const v = row[f.name];
     if (f.kind === 'list') values[f.name] = (v || []).join(', ');
+    else if (f.kind === 'lines') values[f.name] = (v || []).join('\n');
     else if (f.kind === 'checkbox') values[f.name] = Boolean(v);
     else if (f.kind === 'number') values[f.name] = v ?? 0;
     else values[f.name] = v ?? '';

@@ -26,6 +26,11 @@ if (ADMIN_EMAIL && ADMIN_PASSWORD) {
   console.warn('ADMIN_EMAIL / ADMIN_PASSWORD not set; no admin account will be created.');
 }
 
-const app = createApp({ db, jwtSecret, clientDist: join(here, '../../client/dist') });
+const app = createApp({
+  db,
+  jwtSecret,
+  clientDist: join(here, '../../client/dist'),
+  publicUrl: process.env.PUBLIC_URL,
+});
 const port = Number(process.env.PORT) || 3001;
 app.listen(port, () => console.log(`API listening on http://localhost:${port}`));

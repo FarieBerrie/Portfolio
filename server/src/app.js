@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import express from 'express';
 import helmet from 'helmet';
@@ -6,6 +6,7 @@ import { rateLimit } from 'express-rate-limit';
 import { requireAuth } from './auth.js';
 import { publicRouter } from './routes/public.js';
 import { adminRouter } from './routes/admin.js';
+import { renderIndex } from './seo.js';
 
 const passThrough = (req, res, next) => next();
 
@@ -13,7 +14,7 @@ function limiter(windowMs, limit, message) {
   return rateLimit({ windowMs, limit, standardHeaders: 'draft-7', legacyHeaders: false, message: { error: message } });
 }
 
-export function createApp({ db, jwtSecret, clientDist, enableRateLimit = true }) {
+export function createApp({ db, jwtSecret, clientDist, publicUrl, enableRateLimit = true }) {
   const app = express();
 
   app.set('trust proxy', 1);
@@ -40,9 +41,14 @@ export function createApp({ db, jwtSecret, clientDist, enableRateLimit = true })
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
   // In production the built React app is served from the same origin as the API.
-  if (clientDist && existsSync(clientDist)) {
-    app.use(express.static(clientDist));
-    app.get('/{*splat}', (req, res) => res.sendFile(join(clientDist, 'index.html')));
+  // index.html is rendered per request so each page gets its own link-preview tags.
+  const indexFile = clientDist && join(clientDist, 'index.html');
+  if (indexFile && existsSync(indexFile)) {
+    const template = readFileSync(indexFile, 'utf8');
+    app.use(express.static(clientDist, { index: false }));
+    app.get('/{*splat}', (req, res) => {
+      res.type('html').send(renderIndex(template, { db, req, publicUrl }));
+    });
   }
 
   app.use((err, req, res, next) => {

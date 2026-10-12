@@ -12,6 +12,7 @@ export function publicRouter({ db, jwtSecret, limiters }) {
       projects: listRows(db, 'projects'),
       experience: listRows(db, 'experience'),
       skills: listRows(db, 'skills'),
+      stats: listRows(db, 'stats'),
     });
   });
 

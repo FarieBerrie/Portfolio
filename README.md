@@ -6,8 +6,11 @@ A full-stack portfolio site with a built-in content management dashboard. Visito
 
 ## Features
 
-- **Public site:** hero, about, grouped skills, project cards with technology filters, experience timeline, contact form. Responsive, with light and dark themes.
-- **Admin dashboard (`/admin`):** edit your profile; create, update, delete and reorder projects, experience and skills; read, reply to, mark and delete contact messages.
+- **Public site:** hero, a row of highlight stats that count up, about, grouped skills, project cards with technology filters, experience timeline and a contact form. Responsive, with scroll-reveal animations and animated SVG graphics.
+- **Case-study pages (`/projects/:id`):** each project gets its own page with a cover image, a write-up, a screenshot gallery and next/previous navigation.
+- **Light/dark toggle** that follows the system setting until the visitor picks one, plus a reading-progress bar and a back-to-top button.
+- **Link previews:** the server writes each page's title, description and Open Graph image into the HTML, so links shared on LinkedIn, Slack or iMessage show a rich card.
+- **Admin dashboard (`/admin`):** edit your profile; create, update, delete and reorder projects, experience, skills and stats; read, reply to, mark and delete contact messages.
 - **API:** REST endpoints driven by one schema. A single field spec per table handles validation, serialization and CRUD, so adding a field means touching one place.
 - **Security:**
   - Passwords hashed with bcrypt; admin routes require a JWT bearer token.
@@ -15,7 +18,8 @@ A full-stack portfolio site with a built-in content management dashboard. Visito
   - Rate limits on login and on the contact form, plus a honeypot field against spam bots.
   - Helmet security headers, including a Content Security Policy.
   - Every SQL query is parameterized.
-- **Tests:** 12 API integration tests using Node's built-in test runner against an in-memory database.
+- **Schema migrations:** columns added in later versions are added to existing databases automatically on startup.
+- **Tests:** 17 integration tests using Node's built-in test runner, covering the API, validation, migrations and link-preview rendering.
 
 ## Getting started
 
@@ -64,7 +68,7 @@ server/
 | POST   | `/api/auth/login`                 |      | Returns a JWT                        |
 | GET    | `/api/auth/me`                    | ✓    | Current admin                        |
 | PUT    | `/api/admin/profile`              | ✓    | Replace profile                      |
-| GET    | `/api/admin/:resource`            | ✓    | `projects` · `experience` · `skills` |
+| GET    | `/api/admin/:resource`            | ✓    | `projects` · `experience` · `skills` · `stats` |
 | POST   | `/api/admin/:resource`            | ✓    | Create                               |
 | PUT    | `/api/admin/:resource/:id`        | ✓    | Replace                              |
 | DELETE | `/api/admin/:resource/:id`        | ✓    | Delete                               |
@@ -89,6 +93,8 @@ npm install --include=dev && npm run build
 NODE_ENV=production JWT_SECRET=... ADMIN_EMAIL=... ADMIN_PASSWORD=... npm start
 ```
 
-Set `DATABASE_FILE` to a path on the persistent volume. `JWT_SECRET` is required in production.
+Set `DATABASE_FILE` to a path on the persistent volume. `JWT_SECRET` is required in production. If you use a custom domain, set `PUBLIC_URL` (for example `https://yourname.dev`) so link previews point at it.
+
+The link-preview image is `client/public/og-image.png` (1200×630). Replace it with your own if you like.
 
 The admin account is only created when it doesn't exist yet. Changing `ADMIN_PASSWORD` later does not update an existing account.

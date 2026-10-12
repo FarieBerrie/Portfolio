@@ -54,5 +54,20 @@ export async function api(path, { method = 'GET', body } = {}) {
     if (res.status === 401) auth.clear();
     throw new ApiError(data?.error || `Request failed (${res.status})`, res.status, data?.fields);
   }
+  // Any write may change what the public pages show.
+  if (method !== 'GET') portfolioRequest = null;
   return data;
+}
+
+let portfolioRequest = null;
+
+/** Public portfolio data, fetched once and shared by the home and project pages. */
+export function getPortfolio() {
+  if (!portfolioRequest) {
+    portfolioRequest = api('/portfolio').catch((err) => {
+      portfolioRequest = null;
+      throw err;
+    });
+  }
+  return portfolioRequest;
 }

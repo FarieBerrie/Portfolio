@@ -29,10 +29,13 @@ CREATE TABLE IF NOT EXISTS projects (
   title       TEXT NOT NULL,
   summary     TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
+  role        TEXT NOT NULL DEFAULT '',
+  year        TEXT NOT NULL DEFAULT '',
   tech        TEXT NOT NULL DEFAULT '[]',
   repo_url    TEXT NOT NULL DEFAULT '',
   live_url    TEXT NOT NULL DEFAULT '',
   image_url   TEXT NOT NULL DEFAULT '',
+  gallery     TEXT NOT NULL DEFAULT '[]',
   featured    INTEGER NOT NULL DEFAULT 0,
   sort_order  INTEGER NOT NULL DEFAULT 0,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
@@ -56,6 +59,13 @@ CREATE TABLE IF NOT EXISTS skills (
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS stats (
+  id         INTEGER PRIMARY KEY,
+  value      TEXT NOT NULL,
+  label      TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS messages (
   id         INTEGER PRIMARY KEY,
   name       TEXT NOT NULL,
@@ -66,10 +76,30 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 `;
 
+// Columns added after the first release. CREATE TABLE IF NOT EXISTS won't add them to an
+// existing database, so they're added here when missing.
+const ADDED_COLUMNS = {
+  projects: {
+    role: "TEXT NOT NULL DEFAULT ''",
+    year: "TEXT NOT NULL DEFAULT ''",
+    gallery: "TEXT NOT NULL DEFAULT '[]'",
+  },
+};
+
+function migrate(db) {
+  for (const [table, columns] of Object.entries(ADDED_COLUMNS)) {
+    const existing = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name));
+    for (const [name, definition] of Object.entries(columns)) {
+      if (!existing.has(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+    }
+  }
+}
+
 export function openDb(file) {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  migrate(db);
   return db;
 }
 
@@ -105,7 +135,9 @@ export function seedIfEmpty(db) {
         title: 'Portfolio Platform',
         summary: 'This site: a full-stack portfolio with a content management dashboard.',
         description:
-          'React single-page app backed by an Express REST API and SQLite. Content is managed through a JWT-protected admin dashboard with server-side validation, rate-limited contact form, and an automated API test suite.',
+          'The problem: a static portfolio goes stale because every edit means touching code and redeploying.\n\nThe approach: a React single-page app backed by an Express REST API and SQLite. All content is managed through a JWT-protected admin dashboard. One field spec per table drives validation, storage and CRUD routes, so adding a field means editing one place.\n\nThe result: content updates in seconds with no redeploy, a rate-limited and spam-protected contact form, and an automated API test suite.',
+        role: 'Solo developer',
+        year: '2026',
         tech: ['React', 'Express', 'SQLite', 'Node.js', 'JWT'],
         repo_url: 'https://github.com/',
         live_url: '',
@@ -147,6 +179,14 @@ export function seedIfEmpty(db) {
       description: 'Summarize your impact with numbers where you can.',
       sort_order: 0,
     });
+
+    const stats = [
+      { value: '3+', label: 'Years building for the web' },
+      { value: '12', label: 'Projects shipped' },
+      { value: '5', label: 'Languages' },
+      { value: '100%', label: 'Curiosity' },
+    ];
+    stats.forEach((s, i) => insertRow(db, 'stats', { ...s, sort_order: i }));
 
     const skills = {
       Frontend: ['React', 'JavaScript', 'HTML & CSS'],

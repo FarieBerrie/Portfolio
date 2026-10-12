@@ -22,7 +22,7 @@ export default function FormFields({ fields, values, errors = {}, onChange }) {
         };
         // URL inputs stay type="text" so site-relative paths like /resume.pdf are allowed.
         const input =
-          f.kind === 'textarea' ? (
+          f.kind === 'textarea' || f.kind === 'lines' ? (
             <textarea rows={f.rows || 4} {...common} />
           ) : (
             <input

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { api } from '../api.js';
+import { Link, useLocation } from 'react-router-dom';
+import { api, getPortfolio } from '../api.js';
 import { AvatarOrbit, CornerDecor, HeroBackdrop, ProjectArt, WaveDivider } from '../components/Graphics.jsx';
-import Reveal, { useActiveSection, useScrolled } from '../components/Reveal.jsx';
+import Reveal, { useActiveSection, useInView } from '../components/Reveal.jsx';
+import { ExternalLink, SiteFooter, SiteNav, sectionsFor } from '../components/SiteChrome.jsx';
 
 const STAGGER = 90; // ms between siblings
 
@@ -21,13 +22,58 @@ function initials(name) {
     .join('');
 }
 
-function ExternalLink({ href, children, className }) {
-  if (!href) return null;
-  const external = /^https?:/.test(href);
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** Counts the number inside a value like "12", "3+" or "$1.5k" up from zero once it scrolls into view. */
+function CountUp({ value }) {
+  const [ref, inView] = useInView();
+  const match = /^(\D*)(\d+(?:\.\d+)?)(.*)$/.exec(value);
+  const target = match ? Number(match[2]) : null;
+  const decimals = match?.[2].split('.')[1]?.length ?? 0;
+  const [current, setCurrent] = useState(target === null || prefersReducedMotion() ? target : 0);
+
+  useEffect(() => {
+    if (!inView || target === null || prefersReducedMotion()) return;
+    const duration = 1400;
+    const start = performance.now();
+    let frame;
+    const tick = (now) => {
+      const t = Math.min(1, Math.max(0, (now - start) / duration));
+      setCurrent(target * (1 - Math.pow(1 - t, 3))); // ease-out cubic
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    // Background tabs pause animation frames; make sure the real number always lands.
+    const done = setTimeout(() => setCurrent(target), duration + 200);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(done);
+    };
+  }, [inView, target]);
+
+  if (!match) return <span ref={ref}>{value}</span>;
   return (
-    <a href={href} className={className} {...(external ? { target: '_blank', rel: 'noreferrer' } : {})}>
-      {children}
-    </a>
+    <span ref={ref} aria-label={value}>
+      {match[1]}
+      {current.toFixed(decimals)}
+      {match[3]}
+    </span>
+  );
+}
+
+function Stats({ stats }) {
+  if (stats.length === 0) return null;
+  return (
+    <section className="stats container" aria-label="Highlights">
+      {stats.map((s, i) => (
+        <Reveal key={s.id} className="stat" variant="scale" delay={i * STAGGER}>
+          <span className="stat-value grad-text">
+            <CountUp value={s.value} />
+          </span>
+          <span className="stat-label">{s.label}</span>
+        </Reveal>
+      ))}
+    </section>
   );
 }
 
@@ -40,8 +86,8 @@ function Hero({ profile }) {
           <Reveal as="p" className="eyebrow" delay={0}>
             {profile.title}
           </Reveal>
-          {/* Gradient lives on the span: background-clip:text vanishes in Chromium when the same element animates */}
-          <Reveal as="h1" delay={STAGGER}>
+          {/* Gradient text + an animated blur filter don't mix in Chromium, so this uses the blur-free "rise" */}
+          <Reveal as="h1" variant="rise" delay={STAGGER}>
             <span className="grad-text">{profile.name}</span>
           </Reveal>
           {profile.tagline && (
@@ -147,30 +193,33 @@ function Projects({ projects }) {
       <div className="project-grid" key={filter ?? 'all'}>
         {visible.map((p, i) => (
           <Reveal as="article" key={p.id} className="card project" variant="scale" delay={Math.min(i, 5) * STAGGER}>
-            {p.image_url ? (
-              <img className="project-img" src={p.image_url} alt="" loading="lazy" />
-            ) : (
-              <ProjectArt seed={p.title} />
-            )}
+            {/* Image duplicates the title link, so it's hidden from keyboard and screen readers */}
+            <Link to={`/projects/${p.id}`} className="project-media" tabIndex={-1} aria-hidden="true">
+              {p.image_url ? (
+                <img className="project-img" src={p.image_url} alt="" loading="lazy" />
+              ) : (
+                <ProjectArt seed={p.title} />
+              )}
+            </Link>
             <div className="card-body">
               <div className="project-head">
-                <h3>{p.title}</h3>
+                <h3>
+                  <Link to={`/projects/${p.id}`}>{p.title}</Link>
+                </h3>
                 {p.featured && <span className="badge">Featured</span>}
               </div>
+              {(p.year || p.role) && <p className="project-meta">{[p.year, p.role].filter(Boolean).join(' · ')}</p>}
               {p.summary && <p>{p.summary}</p>}
-              {p.description && (
-                <details>
-                  <summary>Details</summary>
-                  <p>{p.description}</p>
-                </details>
-              )}
               <ul className="tags small">
                 {p.tech.map((t) => (
                   <li key={t}>{t}</li>
                 ))}
               </ul>
               <div className="card-links">
-                <ExternalLink href={p.live_url}>Live demo ↗</ExternalLink>
+                <Link to={`/projects/${p.id}`} className="case-study-link">
+                  Read case study <span aria-hidden="true">→</span>
+                </Link>
+                <ExternalLink href={p.live_url}>Live ↗</ExternalLink>
                 <ExternalLink href={p.repo_url}>Source ↗</ExternalLink>
               </div>
             </div>
@@ -270,13 +319,13 @@ function Contact() {
 export default function Home() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const scrolled = useScrolled();
+  const { hash } = useLocation();
 
-  const sections = data ? ['about', 'projects', ...(data.experience.length ? ['experience'] : []), 'contact'] : [];
+  const sections = data ? sectionsFor(data) : [];
   const active = useActiveSection(sections);
 
   useEffect(() => {
-    api('/portfolio')
+    getPortfolio()
       .then((d) => {
         setData(d);
         document.title = `${d.profile.name} · ${d.profile.title || 'Portfolio'}`;
@@ -284,46 +333,28 @@ export default function Home() {
       .catch((err) => setError(err.message));
   }, []);
 
+  // Arriving from another page via /#projects: the section only exists once data has loaded.
+  useEffect(() => {
+    if (data && hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [data, hash]);
+
   if (error) return <div className="center-screen notice error">{error}</div>;
   if (!data) return <div className="center-screen muted">Loading…</div>;
 
-  const { profile, projects, experience, skills } = data;
-  const navLink = (id, label) => (
-    <a href={`#${id}`} className={active === id ? 'active' : undefined} aria-current={active === id ? 'true' : undefined}>
-      {label}
-    </a>
-  );
+  const { profile, projects, experience, skills, stats } = data;
 
   return (
     <>
-      <header className={`nav${scrolled ? ' scrolled' : ''}`}>
-        <div className="container nav-inner">
-          <a href="#top" className="brand">
-            {profile.name}
-          </a>
-          <nav>
-            {navLink('about', 'About')}
-            {navLink('projects', 'Projects')}
-            {experience.length > 0 && navLink('experience', 'Experience')}
-            {navLink('contact', 'Contact')}
-          </nav>
-        </div>
-      </header>
+      <SiteNav profile={profile} sections={sections} active={active} onHome />
       <main id="top">
         <Hero profile={profile} />
+        <Stats stats={stats} />
         <About profile={profile} skills={skills} />
         <Projects projects={projects} />
         <Experience items={experience} />
         <Contact />
       </main>
-      <Reveal as="footer" className="footer container" variant="fade">
-        <span>
-          © {new Date().getFullYear()} {profile.name}
-        </span>
-        <Link to="/admin" className="muted">
-          Admin
-        </Link>
-      </Reveal>
+      <SiteFooter profile={profile} sections={sections} onHome />
     </>
   );
 }

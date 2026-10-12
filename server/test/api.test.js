@@ -153,3 +153,98 @@ describe('admin API', () => {
     assert.equal((await call(`/admin/messages/${msg.id}`, { method: 'DELETE', token })).status, 204);
   });
 });
+
+describe('stats and case-study fields', () => {
+  test('portfolio includes seeded stats', async () => {
+    const { data } = await call('/portfolio');
+    assert.ok(data.stats.length > 0);
+    assert.ok(data.stats[0].value && data.stats[0].label);
+  });
+
+  test('stats CRUD', async () => {
+    const token = await login();
+    const created = await call('/admin/stats', { method: 'POST', token, body: { value: '42', label: 'Answers' } });
+    assert.equal(created.status, 201);
+    const missing = await call('/admin/stats', { method: 'POST', token, body: { value: '1' } });
+    assert.equal(missing.status, 400);
+    assert.ok(missing.data.fields.label);
+    assert.equal((await call(`/admin/stats/${created.data.id}`, { method: 'DELETE', token })).status, 204);
+  });
+
+  test('project gallery accepts one URL per line and rejects unsafe ones', async () => {
+    const token = await login();
+    const ok = await call('/admin/projects', {
+      method: 'POST',
+      token,
+      body: { title: 'Gallery', role: 'Lead', year: '2025', gallery: 'https://example.com/a.png\n/b.png\n' },
+    });
+    assert.equal(ok.status, 201);
+    assert.deepEqual(ok.data.gallery, ['https://example.com/a.png', '/b.png']);
+    assert.equal(ok.data.role, 'Lead');
+
+    const bad = await call('/admin/projects', { method: 'POST', token, body: { title: 'Bad', gallery: ['javascript:alert(1)'] } });
+    assert.equal(bad.status, 400);
+    assert.ok(bad.data.fields.gallery);
+  });
+});
+
+describe('migrations', () => {
+  test('adds new project columns to a database created by the first release', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { DatabaseSync } = await import('node:sqlite');
+
+    const dir = mkdtempSync(join(tmpdir(), 'portfolio-migrate-'));
+    const file = join(dir, 'old.db');
+    const old = new DatabaseSync(file);
+    old.exec(`CREATE TABLE projects (id INTEGER PRIMARY KEY, title TEXT NOT NULL, summary TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '', tech TEXT NOT NULL DEFAULT '[]', repo_url TEXT NOT NULL DEFAULT '',
+      live_url TEXT NOT NULL DEFAULT '', image_url TEXT NOT NULL DEFAULT '', featured INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')));
+      INSERT INTO projects (title) VALUES ('Legacy');`);
+    old.close();
+
+    const db = openDb(file);
+    const cols = db.prepare('PRAGMA table_info(projects)').all().map((c) => c.name);
+    assert.ok(['role', 'year', 'gallery'].every((c) => cols.includes(c)));
+    assert.equal(db.prepare('SELECT gallery FROM projects').get().gallery, '[]');
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe('link previews', () => {
+  test('index.html gets page-specific title and Open Graph tags', async () => {
+    const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+
+    const dist = mkdtempSync(join(tmpdir(), 'portfolio-dist-'));
+    writeFileSync(join(dist, 'index.html'), '<html><head><title>Portfolio</title><!--app-head--></head><body></body></html>');
+    const db = openDb(':memory:');
+    seedIfEmpty(db);
+    db.prepare(`UPDATE profile SET name = 'Ada <Lovelace>' WHERE id = 1`).run();
+    const app = createApp({ db, jwtSecret: 'x', clientDist: dist, publicUrl: 'https://ada.dev', enableRateLimit: false });
+    const srv = await new Promise((resolve) => {
+      const s = app.listen(0, '127.0.0.1', () => resolve(s));
+    });
+    const origin = `http://127.0.0.1:${srv.address().port}`;
+
+    try {
+      const home = await (await fetch(origin + '/')).text();
+      assert.match(home, /<title>Ada &lt;Lovelace&gt; · /);
+      assert.match(home, /<meta property="og:image" content="https:\/\/ada\.dev\/og-image\.png" \/>/);
+      assert.match(home, /<meta property="og:url" content="https:\/\/ada\.dev\/" \/>/);
+
+      const project = await (await fetch(origin + '/projects/1')).text();
+      assert.match(project, /<title>Portfolio Platform · Ada &lt;Lovelace&gt;<\/title>/);
+
+      const missing = await (await fetch(origin + '/projects/999')).text();
+      assert.match(missing, /<title>Ada &lt;Lovelace&gt;/);
+    } finally {
+      srv.close();
+      rmSync(dist, { recursive: true, force: true });
+    }
+  });
+});

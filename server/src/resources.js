@@ -1,5 +1,5 @@
 // Field specs drive validation, (de)serialization and generic CRUD for every table.
-// Types: string | url | email | int | bool | list (string array stored as JSON).
+// Types: string | url | email | int | bool | list (string array stored as JSON) | urllist (list of safe URLs).
 
 const text = (max, required = false) => ({ type: 'string', max, required });
 const url = { type: 'url', max: 500 };
@@ -10,12 +10,23 @@ export const resources = {
     fields: {
       title: text(120, true),
       summary: text(300),
-      description: text(5000),
+      description: text(10000),
+      role: text(120),
+      year: text(20),
       tech: { type: 'list' },
       repo_url: url,
       live_url: url,
       image_url: url,
+      gallery: { type: 'urllist' },
       featured: { type: 'bool' },
+      sort_order: { type: 'int' },
+    },
+  },
+  stats: {
+    table: 'stats',
+    fields: {
+      value: text(20, true),
+      label: text(60, true),
       sort_order: { type: 'int' },
     },
   },
@@ -62,10 +73,12 @@ export const messageFields = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const isListType = (type) => type === 'list' || type === 'urllist';
+
 function defaultFor(type) {
   if (type === 'int') return 0;
   if (type === 'bool') return false;
-  if (type === 'list') return [];
+  if (isListType(type)) return [];
   return '';
 }
 
@@ -107,6 +120,16 @@ function coerce(spec, raw) {
       if (!items || items.some((item) => typeof item !== 'string')) return { error: 'Must be a list of text values' };
       return { value: items.map((s) => s.trim()).filter(Boolean).slice(0, 30) };
     }
+    case 'urllist': {
+      // One URL per line (or comma-separated) from the admin form, or a JSON array.
+      const items = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(/[\n,]/) : null;
+      if (!items || items.some((item) => typeof item !== 'string')) return { error: 'Must be a list of URLs' };
+      const urls = items.map((s) => s.trim()).filter(Boolean);
+      if (urls.length > 12) return { error: 'At most 12 images' };
+      const bad = urls.find((u) => u.length > 500 || !isSafeUrl(u));
+      if (bad) return { error: `Not an http(s) URL or /path: ${bad.slice(0, 60)}` };
+      return { value: urls };
+    }
     default:
       throw new Error(`Unknown field type: ${spec.type}`);
   }
@@ -130,8 +153,8 @@ export function validate(fields, body) {
 function toDb(fields, data) {
   const out = {};
   for (const [key, spec] of Object.entries(fields)) {
-    const value = data[key];
-    if (spec.type === 'list') out[key] = JSON.stringify(value);
+    const value = data[key] ?? defaultFor(spec.type);
+    if (isListType(spec.type)) out[key] = JSON.stringify(value);
     else if (spec.type === 'bool') out[key] = value ? 1 : 0;
     else out[key] = value;
   }
@@ -142,7 +165,7 @@ function fromDb(fields, row) {
   if (!row) return null;
   const out = { ...row };
   for (const [key, spec] of Object.entries(fields)) {
-    if (spec.type === 'list') out[key] = JSON.parse(row[key] || '[]');
+    if (isListType(spec.type)) out[key] = JSON.parse(row[key] || '[]');
     else if (spec.type === 'bool') out[key] = Boolean(row[key]);
   }
   return out;
