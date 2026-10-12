@@ -898,6 +898,20 @@ label.check input {
   .nav nav a[href$='#experience'] {
     display: none;
   }
+  .nav-inner {
+    gap: 10px;
+  }
+  .nav nav {
+    gap: 10px;
+    font-size: 0.82rem;
+  }
+  .nav nav .theme-toggle {
+    width: 30px;
+    height: 30px;
+  }
+  .nav nav a.nav-lab {
+    padding: 5px;
+  }
 }
 
 /* Entrance animations (see components/Reveal.jsx) */
@@ -1392,6 +1406,267 @@ textarea:focus {
   .nav nav .theme-toggle {
     width: 32px;
     height: 32px;
+  }
+}
+
+/* Flow-field nav link */
+.nav nav a.nav-lab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s, color 0.2s;
+}
+.nav nav a.nav-lab::after {
+  display: none;
+}
+.nav nav a.nav-lab:hover,
+.nav nav a.nav-lab.active {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    var(--grad) border-box;
+  box-shadow: var(--glow);
+  color: var(--accent);
+}
+.nav-lab svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Flow-field page */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.ff-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+.ff-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.ff-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+}
+.ff-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 72px;
+  width: 270px;
+  overflow-y: auto;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s;
+  font-size: 0.875rem;
+}
+.ff-panel.hidden {
+  transform: translateX(calc(-100% - 24px));
+  opacity: 0;
+}
+.ff-panel h2 {
+  font-size: 1.1rem;
+  margin: 0 0 4px;
+}
+.ff-group {
+  border: none;
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--border);
+}
+.ff-group legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.ff-field {
+  clear: both;
+  margin-top: 8px;
+}
+.ff-field label {
+  flex-direction: row;
+  justify-content: space-between;
+  font-weight: 500;
+}
+.ff-field output {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.ff-field input[type='range'] {
+  width: 100%;
+  padding: 0;
+  margin: 4px 0 0;
+  border: none;
+  background: none;
+  accent-color: var(--violet);
+  box-shadow: none;
+}
+.ff-palettes {
+  clear: both;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.ff-swatch {
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s;
+}
+.ff-swatch:hover {
+  transform: translateY(-1px);
+}
+.ff-swatch.active {
+  border-color: var(--text);
+}
+.ff-check,
+.ff-switch {
+  clear: both;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+.ff-check input {
+  width: auto;
+  accent-color: var(--violet);
+}
+/* Accessible switch: a real checkbox, visually replaced by the track */
+.ff-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.ff-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  transition: background 0.2s;
+}
+.ff-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1), background 0.2s;
+}
+.ff-switch input:checked + .ff-switch-track {
+  background: var(--grad);
+  border-color: transparent;
+}
+.ff-switch input:checked + .ff-switch-track::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+.ff-switch input:focus-visible + .ff-switch-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ff-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+.ff-hint {
+  margin: 14px 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.8;
+}
+kbd {
+  font-family: inherit;
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.ff-toggle {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(10px);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ff-toggle:hover {
+  border-color: var(--accent);
+}
+.ff-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 760px) {
+  .nav-lab-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .nav nav a.nav-lab {
+    padding: 6px;
+  }
+  .ff-panel {
+    right: 16px;
+    width: auto;
   }
 }
 

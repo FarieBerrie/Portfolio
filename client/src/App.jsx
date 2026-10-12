@@ -4,6 +4,7 @@ import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import Admin from './pages/Admin.jsx';
 import ProjectPage from './pages/ProjectPage.jsx';
+import FlowFieldPage from './pages/FlowFieldPage.jsx';
 import { auth } from './api.js';
 
 function RequireAuth({ children }) {
@@ -27,6 +28,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/projects/:id" element={<ProjectPage />} />
+        <Route path="/flowfield" element={<FlowFieldPage />} />
         <Route path="/admin/login" element={<Login />} />
         <Route
           path="/admin"

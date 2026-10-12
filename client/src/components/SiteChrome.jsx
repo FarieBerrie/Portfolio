@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import Reveal, { useScrolled, useScrollProgress } from './Reveal.jsx';
 
 const SECTION_LABELS = { about: 'About', projects: 'Projects', experience: 'Experience', contact: 'Contact' };
@@ -28,6 +28,22 @@ function SectionLink({ id, onHome, active }) {
     <Link to={`/#${id}`} {...props}>
       {SECTION_LABELS[id]}
     </Link>
+  );
+}
+
+/** Nav link to the flow-field playground. On narrow screens only the icon shows; the label stays for screen readers. */
+function FlowFieldLink() {
+  return (
+    <NavLink to="/flowfield" className={({ isActive }) => `nav-lab${isActive ? ' active' : ''}`} title="Flow Field">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <path d="M3 8c3-3 6 3 9 0s6-3 9 0" />
+          <path d="M3 13c3-3 6 3 9 0s6-3 9 0" />
+          <path d="M3 18c3-3 6 3 9 0s6-3 9 0" />
+        </g>
+      </svg>
+      <span className="nav-lab-label">Flow Field</span>
+    </NavLink>
   );
 }
 
@@ -112,10 +128,11 @@ export function SiteNav({ profile, sections, active, onHome = false }) {
               {profile.name}
             </Link>
           )}
-          <nav>
+          <nav aria-label="Main">
             {sections.map((id) => (
               <SectionLink key={id} id={id} onHome={onHome} active={active} />
             ))}
+            <FlowFieldLink />
             <ThemeToggle />
           </nav>
         </div>
@@ -151,6 +168,9 @@ export function SiteFooter({ profile, sections, onHome = false }) {
                 <SectionLink id={id} onHome={onHome} />
               </li>
             ))}
+            <li>
+              <Link to="/flowfield">Flow Field</Link>
+            </li>
           </ul>
         </div>
         {connect.length > 0 && (

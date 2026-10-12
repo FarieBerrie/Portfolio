@@ -8,6 +8,7 @@ A full-stack portfolio site with a built-in content management dashboard. Visito
 
 - **Public site:** hero, a row of highlight stats that count up, about, grouped skills, project cards with technology filters, experience timeline and a contact form. Responsive, with scroll-reveal animations and animated SVG graphics.
 - **Case-study pages (`/projects/:id`):** each project gets its own page with a cover image, a write-up, a screenshot gallery and next/previous navigation.
+- **Flow Field playground (`/flowfield`):** a Perlin-noise particle painter on `<canvas>` with a kaleidoscope view. The simulation draws to an offscreen canvas, and one wedge of it is copied around the centre with alternating reflections, so the kaleidoscope costs a few image copies per frame rather than redrawing every particle. Painting maps your pointer back into the source wedge. Adjustable segments, spin, palettes, speed, density and turbulence, with keyboard shortcuts and PNG export.
 - **Light/dark toggle** that follows the system setting until the visitor picks one, plus a reading-progress bar and a back-to-top button.
 - **Link previews:** the server writes each page's title, description and Open Graph image into the HTML, so links shared on LinkedIn, Slack or iMessage show a rich card.
 - **Admin dashboard (`/admin`):** edit your profile; create, update, delete and reorder projects, experience, skills and stats; read, reply to, mark and delete contact messages.
