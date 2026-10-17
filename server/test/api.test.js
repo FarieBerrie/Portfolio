@@ -214,6 +214,48 @@ describe('migrations', () => {
   });
 });
 
+describe('static files', () => {
+  test('serves a PDF from the built site instead of the SPA shell', async () => {
+    const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+
+    const dist = mkdtempSync(join(tmpdir(), 'portfolio-static-'));
+    const pdf = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n');
+    writeFileSync(join(dist, 'resume.pdf'), pdf);
+    writeFileSync(join(dist, 'index.html'), '<html><head><title>Portfolio</title><!--app-head--></head><body>SPA</body></html>');
+    const db = openDb(':memory:');
+    seedIfEmpty(db);
+    const app = createApp({ db, jwtSecret: 'x', clientDist: dist, enableRateLimit: false });
+    const srv = await new Promise((resolve) => {
+      const s = app.listen(0, '127.0.0.1', () => resolve(s));
+    });
+    const origin = `http://127.0.0.1:${srv.address().port}`;
+
+    try {
+      const resume = await fetch(origin + '/resume.pdf');
+      assert.equal(resume.status, 200);
+      assert.match(resume.headers.get('content-type') || '', /^application\/pdf\b/);
+      assert.match(resume.headers.get('content-disposition') || '', /inline/);
+      const body = Buffer.from(await resume.arrayBuffer());
+      assert.equal(body.subarray(0, 5).toString(), '%PDF-');
+      assert.equal(body.equals(pdf), true);
+
+      const missing = await fetch(origin + '/missing.pdf');
+      assert.equal(missing.status, 404);
+      assert.equal((missing.headers.get('content-type') || '').includes('text/html'), false);
+
+      const home = await fetch(origin + '/');
+      assert.equal(home.status, 200);
+      assert.match(home.headers.get('content-type') || '', /text\/html/);
+      assert.match(await home.text(), /<title>/);
+    } finally {
+      srv.close();
+      rmSync(dist, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('link previews', () => {
   test('index.html gets page-specific title and Open Graph tags', async () => {
     const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs');

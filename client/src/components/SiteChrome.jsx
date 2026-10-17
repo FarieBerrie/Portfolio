@@ -6,9 +6,11 @@ const SECTION_LABELS = { about: 'About', projects: 'Projects', experience: 'Expe
 
 export function ExternalLink({ href, children, className, ...rest }) {
   if (!href) return null;
-  const external = /^https?:/.test(href);
+  // http(s) links and site-relative paths (such as /resume.pdf) leave this page, so open a new tab.
+  // mailto: stays in this tab. An empty href renders nothing, which hides optional links like the résumé.
+  const opensNewTab = /^https?:\/\//.test(href) || (href.startsWith('/') && !href.startsWith('//'));
   return (
-    <a href={href} className={className} {...(external ? { target: '_blank', rel: 'noreferrer' } : {})} {...rest}>
+    <a href={href} className={className} {...(opensNewTab ? { target: '_blank', rel: 'noreferrer' } : {})} {...rest}>
       {children}
     </a>
   );
@@ -132,6 +134,11 @@ export function SiteNav({ profile, sections, active, onHome = false }) {
             {sections.map((id) => (
               <SectionLink key={id} id={id} onHome={onHome} active={active} />
             ))}
+            {profile.resume_url && (
+              <ExternalLink href={profile.resume_url} className="nav-resume">
+                Résumé
+              </ExternalLink>
+            )}
             <FlowFieldLink />
             <ThemeToggle />
           </nav>
@@ -190,7 +197,6 @@ export function SiteFooter({ profile, sections, onHome = false }) {
         <span>
           © {new Date().getFullYear()} {profile.name} · Built with React, Express &amp; SQLite
         </span>
-        <Link to="/admin">Admin</Link>
       </div>
     </Reveal>
   );

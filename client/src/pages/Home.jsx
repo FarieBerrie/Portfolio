@@ -256,7 +256,7 @@ function Experience({ items }) {
   );
 }
 
-function Contact() {
+function Contact({ profile }) {
   const empty = { name: '', email: '', body: '', website: '' };
   const [form, setForm] = useState(empty);
   const [status, setStatus] = useState({ state: 'idle' });
@@ -283,6 +283,12 @@ function Contact() {
       <Reveal as="h2">Get in touch</Reveal>
       <Reveal as="p" className="muted" variant="fade" delay={STAGGER}>
         Have a role, project or question? Send a message and I'll get back to you.
+        {profile.resume_url && (
+          <>
+            {' '}
+            My <ExternalLink href={profile.resume_url}>résumé</ExternalLink> is here too.
+          </>
+        )}
       </Reveal>
       <Reveal as="form" className="card form" variant="scale" delay={STAGGER * 2} onSubmit={submit} noValidate>
         <div className="row">
@@ -352,7 +358,7 @@ export default function Home() {
         <About profile={profile} skills={skills} />
         <Projects projects={projects} />
         <Experience items={experience} />
-        <Contact />
+        <Contact profile={profile} />
       </main>
       <SiteFooter profile={profile} sections={sections} onHome />
     </>
