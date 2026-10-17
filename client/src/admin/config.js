@@ -10,7 +10,7 @@ export const profileForm = [
   { name: 'email', label: 'Public email', kind: 'email' },
   { name: 'github_url', label: 'GitHub URL', kind: 'url' },
   { name: 'linkedin_url', label: 'LinkedIn URL', kind: 'url' },
-  { name: 'resume_url', label: 'Résumé URL (PDF link)', kind: 'url' },
+  { name: 'resume_url', label: 'Résumé URL (PDF link)', kind: 'url', placeholder: '/resume.pdf' },
   { name: 'avatar_url', label: 'Photo URL', kind: 'url' },
 ];
 

@@ -42,11 +42,28 @@ export function createApp({ db, jwtSecret, clientDist, publicUrl, enableRateLimi
 
   // In production the built React app is served from the same origin as the API.
   // index.html is rendered per request so each page gets its own link-preview tags.
+  // Real files in client/dist (including public assets like /resume.pdf) are sent
+  // first. A request for a missing file with an extension must not fall through to
+  // the SPA shell, or a PDF/image URL would come back as HTML.
   const indexFile = clientDist && join(clientDist, 'index.html');
   if (indexFile && existsSync(indexFile)) {
     const template = readFileSync(indexFile, 'utf8');
-    app.use(express.static(clientDist, { index: false }));
+    app.use(
+      express.static(clientDist, {
+        index: false,
+        setHeaders(res, filePath) {
+          if (filePath.toLowerCase().endsWith('.pdf')) {
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', 'inline');
+          }
+        },
+      }),
+    );
     app.get('/{*splat}', (req, res) => {
+      if (/\.[a-z0-9]+$/i.test(req.path)) {
+        res.status(404).type('text/plain').send('Not found');
+        return;
+      }
       res.type('html').send(renderIndex(template, { db, req, publicUrl }));
     });
   }
