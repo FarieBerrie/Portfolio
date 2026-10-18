@@ -106,3 +106,15 @@ export function useScrolled(offset = 8) {
   }, [offset]);
   return scrolled;
 }
+
+/**
+ * Pointer-move handler for a container: tells the `.spot` card under the pointer where the
+ * pointer is (--mx, --my), so its CSS can light that spot up.
+ */
+export function spotlight(e) {
+  const card = e.target.closest?.('.spot');
+  if (!card) return;
+  const rect = card.getBoundingClientRect();
+  card.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+  card.style.setProperty('--my', `${e.clientY - rect.top}px`);
+}

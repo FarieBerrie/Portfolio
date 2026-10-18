@@ -25,7 +25,7 @@ export default function Login() {
   }
 
   return (
-    <div className="center-screen backdrop-screen">
+    <div className="center-screen backdrop-screen ink">
       <HeroBackdrop />
       <Reveal as="form" className="card form login" variant="scale" onSubmit={submit}>
         <h1>Admin sign in</h1>

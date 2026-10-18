@@ -46,6 +46,7 @@ function noise(x, y, z) {
 
 // ---------- Palettes ----------
 export const PALETTES = [
+  { name: 'Gilded', bg: '#050b1a', colors: ['#2f6bff', '#5b8cff', '#93b4ff', '#f2c14e', '#fbe4a6'] },
   { name: 'Nebula', bg: '#09091a', colors: ['#60a5fa', '#8b5cf6', '#c084fc', '#e879f9', '#dbeafe'] },
   { name: 'Ember', bg: '#0b0b10', colors: ['#ff6b35', '#f7c59f', '#ffb86b', '#e63946', '#fff1d0'] },
   { name: 'Ocean', bg: '#03111c', colors: ['#00b4d8', '#90e0ef', '#48cae4', '#caf0f8', '#0077b6'] },

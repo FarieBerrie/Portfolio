@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getPortfolio } from '../api.js';
-import { HeroBackdrop, ProjectArt, WaveDivider } from '../components/Graphics.jsx';
-import Reveal from '../components/Reveal.jsx';
+import { HeroBackdrop, ProjectArt } from '../components/Graphics.jsx';
+import Icon from '../components/Icons.jsx';
+import Reveal, { spotlight } from '../components/Reveal.jsx';
 import { ExternalLink, SiteFooter, SiteNav, sectionsFor } from '../components/SiteChrome.jsx';
 
 const STAGGER = 90;
@@ -11,20 +12,25 @@ function ordered(projects) {
   return [...projects].sort((a, b) => Number(b.featured) - Number(a.featured) || a.sort_order - b.sort_order);
 }
 
-function Media({ project, className }) {
+function Media({ project, index, className }) {
   return project.image_url ? (
     <img className={className} src={project.image_url} alt={`${project.title} screenshot`} />
   ) : (
-    <ProjectArt seed={project.title} />
+    <ProjectArt seed={project.title} index={index} />
   );
 }
 
 function NeighborCard({ project, direction }) {
   if (!project) return <div />;
   return (
-    <Link to={`/projects/${project.id}`} className={`card neighbor neighbor-${direction}`}>
-      <span className="neighbor-label">{direction === 'prev' ? '← Previous' : 'Next →'}</span>
-      <span className="neighbor-title">{project.title}</span>
+    <Link to={`/projects/${project.id}`} className={`card neighbor neighbor-${direction} spot`}>
+      <span className="neighbor-arrow">
+        <Icon name={direction === 'prev' ? 'arrowLeft' : 'arrowRight'} />
+      </span>
+      <span className="neighbor-text">
+        <span className="neighbor-label">{direction === 'prev' ? 'Previous' : 'Next'}</span>
+        <span className="neighbor-title">{project.title}</span>
+      </span>
     </Link>
   );
 }
@@ -78,18 +84,19 @@ export default function ProjectPage() {
     <>
       <SiteNav profile={profile} sections={sections} />
       {/* Keyed by project so moving to the next/previous project replays the entrance */}
-      <main key={project.id}>
-        <div className="hero-wrap project-hero">
+      <main key={project.id} onPointerMove={spotlight}>
+        <div className="hero-wrap project-hero ink">
           <HeroBackdrop />
           <div className="container">
             <Reveal as={Link} to="/#projects" className="back-link" variant="fade">
-              ← All projects
+              <Icon name="arrowLeft" /> All projects
             </Reveal>
             <Reveal as="p" className="eyebrow" delay={STAGGER}>
+              <Icon name="sparkle" />
               {meta || 'Case study'}
             </Reveal>
             <Reveal as="h1" variant="rise" delay={STAGGER * 2}>
-              <span className="grad-text">{project.title}</span>
+              {project.title}
             </Reveal>
             {project.summary && (
               <Reveal as="p" className="lead" delay={STAGGER * 3}>
@@ -106,20 +113,19 @@ export default function ProjectPage() {
               </ul>
               <div className="actions">
                 <ExternalLink className="btn btn-primary" href={project.live_url}>
-                  View live ↗
+                  View live <Icon name="arrowUpRight" />
                 </ExternalLink>
-                <ExternalLink className="btn" href={project.repo_url}>
-                  Source code ↗
+                <ExternalLink className="btn btn-ghost" href={project.repo_url}>
+                  <Icon name="github" /> Source code
                 </ExternalLink>
               </div>
             </Reveal>
           </div>
-          <WaveDivider />
         </div>
 
         <div className="container project-content">
           <Reveal className="project-cover card" variant="scale">
-            <Media project={project} className="project-cover-img" />
+            <Media project={project} index={index} className="project-cover-img" />
           </Reveal>
 
           {paragraphs.length > 0 && (

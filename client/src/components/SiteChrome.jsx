@@ -1,8 +1,42 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { Globe, HeroBackdrop, Monogram } from './Graphics.jsx';
+import Icon from './Icons.jsx';
 import Reveal, { useScrolled, useScrollProgress } from './Reveal.jsx';
 
 const SECTION_LABELS = { about: 'About', projects: 'Projects', experience: 'Experience', contact: 'Contact' };
+
+export function initials(name = '') {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('');
+}
+
+/** The profile's links that are filled in, as [label, href, icon]. */
+export function socialLinks(profile) {
+  return [
+    ['GitHub', profile.github_url, 'github'],
+    ['LinkedIn', profile.linkedin_url, 'linkedin'],
+    ['Email', profile.email && `mailto:${profile.email}`, 'mail'],
+    ['Résumé', profile.resume_url, 'file'],
+  ].filter(([, href]) => href);
+}
+
+/** Round icon buttons for the profile's links. */
+export function SocialIcons({ profile, className = '' }) {
+  return (
+    <div className={`social-icons ${className}`}>
+      {socialLinks(profile).map(([label, href, icon]) => (
+        <ExternalLink key={label} href={href} className="social-icon" aria-label={label} title={label}>
+          <Icon name={icon} />
+        </ExternalLink>
+      ))}
+    </div>
+  );
+}
 
 export function ExternalLink({ href, children, className, ...rest }) {
   if (!href) return null;
@@ -37,13 +71,7 @@ function SectionLink({ id, onHome, active }) {
 function FlowFieldLink() {
   return (
     <NavLink to="/flowfield" className={({ isActive }) => `nav-lab${isActive ? ' active' : ''}`} title="Flow Field">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-          <path d="M3 8c3-3 6 3 9 0s6-3 9 0" />
-          <path d="M3 13c3-3 6 3 9 0s6-3 9 0" />
-          <path d="M3 18c3-3 6 3 9 0s6-3 9 0" />
-        </g>
-      </svg>
+      <Icon name="flow" />
       <span className="nav-lab-label">Flow Field</span>
     </NavLink>
   );
@@ -107,9 +135,7 @@ export function BackToTop() {
       aria-label="Back to top"
       tabIndex={visible ? 0 : -1}
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      <Icon name="arrowUp" strokeWidth={2.2} />
     </button>
   );
 }
@@ -123,11 +149,13 @@ export function SiteNav({ profile, sections, active, onHome = false }) {
         <div className="container nav-inner">
           {onHome ? (
             <a href="#top" className="brand">
-              {profile.name}
+              <Monogram initials={initials(profile.name)} />
+              <span className="brand-name">{profile.name}</span>
             </a>
           ) : (
             <Link to="/" className="brand">
-              {profile.name}
+              <Monogram initials={initials(profile.name)} />
+              <span className="brand-name">{profile.name}</span>
             </Link>
           )}
           <nav aria-label="Main">
@@ -150,22 +178,25 @@ export function SiteNav({ profile, sections, active, onHome = false }) {
 }
 
 export function SiteFooter({ profile, sections, onHome = false }) {
-  const connect = [
-    ['GitHub', profile.github_url],
-    ['LinkedIn', profile.linkedin_url],
-    ['Email', profile.email && `mailto:${profile.email}`],
-    ['Résumé', profile.resume_url],
-  ].filter(([, href]) => href);
+  const connect = socialLinks(profile);
 
   return (
-    <Reveal as="footer" className="site-footer" variant="fade">
+    <Reveal as="footer" className="site-footer ink" variant="fade">
+      <HeroBackdrop />
+      <Globe />
       <div className="container footer-grid">
         <div className="footer-brand">
           <p className="footer-name">
-            <span className="grad-text">{profile.name}</span>
+            <Monogram initials={initials(profile.name)} />
+            {profile.name}
           </p>
           {profile.tagline && <p className="muted">{profile.tagline}</p>}
-          {profile.location && <p className="muted small-text">📍 {profile.location}</p>}
+          {profile.location && (
+            <p className="muted small-text with-icon">
+              <Icon name="pin" /> {profile.location}
+            </p>
+          )}
+          <SocialIcons profile={profile} />
         </div>
         <div>
           <h2 className="footer-heading">Explore</h2>

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api, getPortfolio } from '../api.js';
-import { AvatarOrbit, CornerDecor, HeroBackdrop, ProjectArt, WaveDivider } from '../components/Graphics.jsx';
-import Reveal, { useActiveSection, useInView } from '../components/Reveal.jsx';
-import { ExternalLink, SiteFooter, SiteNav, sectionsFor } from '../components/SiteChrome.jsx';
+import { AvatarOrbit, CodeWindow, CornerDecor, HeroBackdrop, PaperPlane, ProjectArt, ScrollCue, Underline, sparklePath } from '../components/Graphics.jsx';
+import Icon, { categoryIcon } from '../components/Icons.jsx';
+import Reveal, { spotlight, useActiveSection, useInView } from '../components/Reveal.jsx';
+import { ExternalLink, SiteFooter, SiteNav, SocialIcons, initials, sectionsFor } from '../components/SiteChrome.jsx';
 
 const STAGGER = 90; // ms between siblings
 
@@ -11,15 +12,6 @@ function formatMonth(value) {
   const match = /^(\d{4})-(\d{2})$/.exec(value || '');
   if (!match) return value;
   return new Date(Number(match[1]), Number(match[2]) - 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-}
-
-function initials(name) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join('');
 }
 
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -61,13 +53,18 @@ function CountUp({ value }) {
   );
 }
 
+const STAT_ICONS = ['sparkle', 'bolt', 'star', 'layers'];
+
 function Stats({ stats }) {
   if (stats.length === 0) return null;
   return (
     <section className="stats container" aria-label="Highlights">
       {stats.map((s, i) => (
-        <Reveal key={s.id} className="stat" variant="scale" delay={i * STAGGER}>
-          <span className="stat-value grad-text">
+        <Reveal key={s.id} className="stat spot" variant="scale" delay={i * STAGGER}>
+          <span className="stat-icon">
+            <Icon name={STAT_ICONS[i % STAT_ICONS.length]} />
+          </span>
+          <span className="stat-value">
             <CountUp value={s.value} />
           </span>
           <span className="stat-label">{s.label}</span>
@@ -77,18 +74,63 @@ function Stats({ stats }) {
   );
 }
 
-function Hero({ profile }) {
+/** The name with its last word set in gold italic, underlined by a hand-drawn stroke. */
+function Name({ name }) {
+  const words = name.trim().split(/\s+/);
+  const last = words.pop();
   return (
-    <div className="hero-wrap">
+    <>
+      {words.length > 0 && `${words.join(' ')} `}
+      <span className="name-accent">
+        {last}
+        <Underline />
+      </span>
+    </>
+  );
+}
+
+/** Every skill on a slowly scrolling strip (decorative: the About section lists them properly). */
+function SkillMarquee({ skills }) {
+  if (skills.length < 3) return null;
+  const names = skills.map((s) => s.name);
+  // Long enough to fill a wide screen, then doubled so the loop has no seam
+  const run = Array.from({ length: Math.ceil(14 / names.length) }, () => names).flat();
+  return (
+    <div className="marquee" aria-hidden="true">
+      <div className="marquee-track">
+        {[0, 1].map((copy) => (
+          <ul key={copy} className="marquee-row">
+            {run.map((n, i) => (
+              <li key={i}>
+                <svg viewBox="0 0 20 20" className="marquee-star">
+                  <path d={sparklePath(10, 10, 8)} />
+                </svg>
+                {n}
+              </li>
+            ))}
+          </ul>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const CHIP_SPOTS = ['chip-a', 'chip-b', 'chip-c'];
+
+function Hero({ profile, skills }) {
+  const chips = skills.slice(0, 3);
+  return (
+    <div className="hero-wrap ink">
       <HeroBackdrop />
       <section className="hero container">
         <div className="hero-text">
           <Reveal as="p" className="eyebrow" delay={0}>
+            <Icon name="sparkle" />
             {profile.title}
           </Reveal>
           {/* Gradient text + an animated blur filter don't mix in Chromium, so this uses the blur-free "rise" */}
           <Reveal as="h1" variant="rise" delay={STAGGER}>
-            <span className="grad-text">{profile.name}</span>
+            <Name name={profile.name} />
           </Reveal>
           {profile.tagline && (
             <Reveal as="p" className="lead" delay={STAGGER * 2}>
@@ -97,19 +139,22 @@ function Hero({ profile }) {
           )}
           <Reveal className="actions" delay={STAGGER * 3}>
             <a className="btn btn-primary" href="#projects">
-              View projects
+              View projects <Icon name="arrowRight" />
             </a>
-            <ExternalLink className="btn" href={profile.resume_url}>
-              Résumé
+            <ExternalLink className="btn btn-ghost" href={profile.resume_url}>
+              <Icon name="file" /> Résumé
             </ExternalLink>
-            <a className="btn" href="#contact">
+            <a className="btn btn-ghost" href="#contact">
               Contact me
             </a>
           </Reveal>
-          <Reveal className="socials" variant="fade" delay={STAGGER * 4}>
-            <ExternalLink href={profile.github_url}>GitHub</ExternalLink>
-            <ExternalLink href={profile.linkedin_url}>LinkedIn</ExternalLink>
-            {profile.email && <a href={`mailto:${profile.email}`}>{profile.email}</a>}
+          <Reveal className="hero-meta" variant="fade" delay={STAGGER * 4}>
+            <SocialIcons profile={profile} />
+            {profile.location && (
+              <span className="with-icon muted">
+                <Icon name="pin" /> {profile.location}
+              </span>
+            )}
           </Reveal>
         </div>
         <Reveal className="avatar-wrap" variant="scale" delay={STAGGER * 2}>
@@ -117,14 +162,42 @@ function Hero({ profile }) {
           <div className="avatar" aria-hidden={!profile.avatar_url}>
             {profile.avatar_url ? <img src={profile.avatar_url} alt={profile.name} /> : <span>{initials(profile.name)}</span>}
           </div>
+          {chips.map((skill, i) => (
+            <span key={skill.id} className={`float-chip ${CHIP_SPOTS[i]}`} aria-hidden="true">
+              <Icon name={categoryIcon(skill.category)} />
+              {skill.name}
+            </span>
+          ))}
         </Reveal>
       </section>
-      <WaveDivider />
+      <SkillMarquee skills={skills} />
+      <a href="#about" className="scroll-cue-link" aria-label="Scroll to About">
+        <ScrollCue />
+      </a>
     </div>
   );
 }
 
-function About({ profile, skills }) {
+/** "02 — Projects" kicker over a heading whose <em> words are set in gold italic. */
+function SectionHead({ n, icon, label, children }) {
+  return (
+    <header className="section-head">
+      <Reveal as="p" className="kicker" variant="fade">
+        <span className="kicker-icon">
+          <Icon name={icon} />
+        </span>
+        <span className="kicker-num">{String(n).padStart(2, '0')}</span>
+        <span className="kicker-rule" />
+        {label}
+      </Reveal>
+      <Reveal as="h2" variant="rise" delay={60}>
+        {children}
+      </Reveal>
+    </header>
+  );
+}
+
+function About({ n, profile, skills }) {
   const groups = useMemo(() => {
     const map = new Map();
     for (const skill of skills) {
@@ -138,22 +211,36 @@ function About({ profile, skills }) {
   return (
     <section id="about" className="section container">
       <CornerDecor />
-      <Reveal as="h2">About</Reveal>
-      <div className="about-grid">
-        <Reveal className="bio" variant="left" delay={STAGGER}>
+      <SectionHead n={n} icon="user" label="About">
+        About <em>me</em>
+      </SectionHead>
+      <div className="bento">
+        <Reveal className="card bento-bio spot" variant="left" delay={STAGGER}>
           {profile.bio.split(/\n\s*\n/).map((para, i) => (
             <p key={i}>{para}</p>
           ))}
-          {profile.location && <p className="muted">📍 {profile.location}</p>}
+          {profile.location && (
+            <p className="with-icon muted">
+              <Icon name="pin" /> {profile.location}
+            </p>
+          )}
         </Reveal>
-        <div className="skills">
+        <Reveal className="bento-code" variant="right" delay={STAGGER * 2}>
+          <CodeWindow />
+        </Reveal>
+        <div className="skill-cards">
           {groups.map(([category, names], g) => (
-            <Reveal key={category} className="skill-group" delay={STAGGER * (g + 1)}>
-              <h3>{category}</h3>
+            <Reveal key={category} className="card skill-group spot" delay={STAGGER * (g + 1)}>
+              <div className="skill-head">
+                <span className="skill-icon">
+                  <Icon name={categoryIcon(category)} />
+                </span>
+                <h3>{category}</h3>
+              </div>
               <ul className="tags">
-                {names.map((n, i) => (
-                  <li key={n} style={{ '--i': i }}>
-                    {n}
+                {names.map((name, i) => (
+                  <li key={name} style={{ '--i': i }}>
+                    {name}
                   </li>
                 ))}
               </ul>
@@ -165,7 +252,7 @@ function About({ profile, skills }) {
   );
 }
 
-function Projects({ projects }) {
+function Projects({ n, projects }) {
   const [filter, setFilter] = useState(null);
   const allTech = useMemo(() => [...new Set(projects.flatMap((p) => p.tech))].sort(), [projects]);
   const sorted = useMemo(
@@ -176,7 +263,9 @@ function Projects({ projects }) {
 
   return (
     <section id="projects" className="section container">
-      <Reveal as="h2">Projects</Reveal>
+      <SectionHead n={n} icon="grid" label="Work">
+        Selected <em>projects</em>
+      </SectionHead>
       {allTech.length > 1 && (
         <Reveal className="filters" variant="fade" delay={STAGGER} role="group" aria-label="Filter projects by technology">
           <button className={`chip ${filter === null ? 'active' : ''}`} onClick={() => setFilter(null)}>
@@ -192,23 +281,24 @@ function Projects({ projects }) {
       {/* Keyed by filter so the cards re-play their entrance whenever the filter changes */}
       <div className="project-grid" key={filter ?? 'all'}>
         {visible.map((p, i) => (
-          <Reveal as="article" key={p.id} className="card project" variant="scale" delay={Math.min(i, 5) * STAGGER}>
+          <Reveal as="article" key={p.id} className={`card project spot${p.featured ? ' featured' : ''}`} variant="scale" delay={Math.min(i, 5) * STAGGER}>
             {/* Image duplicates the title link, so it's hidden from keyboard and screen readers */}
             <Link to={`/projects/${p.id}`} className="project-media" tabIndex={-1} aria-hidden="true">
-              {p.image_url ? (
-                <img className="project-img" src={p.image_url} alt="" loading="lazy" />
-              ) : (
-                <ProjectArt seed={p.title} />
+              {p.image_url ? <img className="project-img" src={p.image_url} alt="" loading="lazy" /> : <ProjectArt seed={p.title} index={sorted.indexOf(p)} />}
+              <span className="media-arrow">
+                <Icon name="arrowUpRight" />
+              </span>
+              {p.featured && (
+                <span className="badge">
+                  <Icon name="star" /> Featured
+                </span>
               )}
             </Link>
             <div className="card-body">
-              <div className="project-head">
-                <h3>
-                  <Link to={`/projects/${p.id}`}>{p.title}</Link>
-                </h3>
-                {p.featured && <span className="badge">Featured</span>}
-              </div>
               {(p.year || p.role) && <p className="project-meta">{[p.year, p.role].filter(Boolean).join(' · ')}</p>}
+              <h3>
+                <Link to={`/projects/${p.id}`}>{p.title}</Link>
+              </h3>
               {p.summary && <p>{p.summary}</p>}
               <ul className="tags small">
                 {p.tech.map((t) => (
@@ -217,10 +307,18 @@ function Projects({ projects }) {
               </ul>
               <div className="card-links">
                 <Link to={`/projects/${p.id}`} className="case-study-link">
-                  Read case study <span aria-hidden="true">→</span>
+                  Case study <Icon name="arrowRight" />
                 </Link>
-                <ExternalLink href={p.live_url}>Live ↗</ExternalLink>
-                <ExternalLink href={p.repo_url}>Source ↗</ExternalLink>
+                {p.live_url && (
+                  <ExternalLink href={p.live_url} className="icon-link" aria-label={`${p.title}: live site`} title="Live site">
+                    <Icon name="globe" />
+                  </ExternalLink>
+                )}
+                {p.repo_url && (
+                  <ExternalLink href={p.repo_url} className="icon-link" aria-label={`${p.title}: source code`} title="Source code">
+                    <Icon name="github" />
+                  </ExternalLink>
+                )}
               </div>
             </div>
           </Reveal>
@@ -231,22 +329,33 @@ function Projects({ projects }) {
   );
 }
 
-function Experience({ items }) {
+function Experience({ n, items }) {
   if (items.length === 0) return null;
   return (
     <section id="experience" className="section container">
-      <Reveal as="h2">Experience</Reveal>
+      <SectionHead n={n} icon="briefcase" label="Career">
+        Where I&rsquo;ve <em>worked</em>
+      </SectionHead>
       <ol className="timeline">
         {items.map((job, i) => (
           <Reveal as="li" key={job.id} variant="left" delay={Math.min(i, 5) * STAGGER}>
-            <div className="timeline-date">
-              {formatMonth(job.start_date)} – {job.end_date ? formatMonth(job.end_date) : 'Present'}
-            </div>
-            <div>
+            <svg className="timeline-node" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2 22 12 12 22 2 12Z" />
+              <path d="M12 7 17 12 12 17 7 12Z" />
+            </svg>
+            <div className="card timeline-card spot">
+              <div className="timeline-date">
+                <Icon name="clock" />
+                {formatMonth(job.start_date)} – {job.end_date ? formatMonth(job.end_date) : 'Present'}
+              </div>
               <h3>
                 {job.role} <span className="muted">· {job.company}</span>
               </h3>
-              {job.location && <p className="muted small-text">{job.location}</p>}
+              {job.location && (
+                <p className="muted small-text with-icon">
+                  <Icon name="pin" /> {job.location}
+                </p>
+              )}
               {job.description && <p>{job.description}</p>}
             </div>
           </Reveal>
@@ -256,7 +365,7 @@ function Experience({ items }) {
   );
 }
 
-function Contact({ profile }) {
+function Contact({ n, profile }) {
   const empty = { name: '', email: '', body: '', website: '' };
   const [form, setForm] = useState(empty);
   const [status, setStatus] = useState({ state: 'idle' });
@@ -278,46 +387,71 @@ function Contact({ profile }) {
   const fieldError = (name) => status.fields?.[name] && <span className="field-error">{status.fields[name]}</span>;
 
   return (
-    <section id="contact" className="section container narrow">
+    <section id="contact" className="section container">
       <CornerDecor className="flip" />
-      <Reveal as="h2">Get in touch</Reveal>
-      <Reveal as="p" className="muted" variant="fade" delay={STAGGER}>
-        Have a role, project or question? Send a message and I'll get back to you.
-        {profile.resume_url && (
-          <>
-            {' '}
-            My <ExternalLink href={profile.resume_url}>résumé</ExternalLink> is here too.
-          </>
-        )}
-      </Reveal>
-      <Reveal as="form" className="card form" variant="scale" delay={STAGGER * 2} onSubmit={submit} noValidate>
-        <div className="row">
+      <SectionHead n={n} icon="send" label="Contact">
+        Get in <em>touch</em>
+      </SectionHead>
+      <div className="contact-grid">
+        <Reveal className="contact-intro" variant="left" delay={STAGGER}>
+          <p className="lead">
+            Have a role, project or question? Send a message and I&rsquo;ll get back to you.
+            {profile.resume_url && (
+              <>
+                {' '}
+                My <ExternalLink href={profile.resume_url}>résumé</ExternalLink> is here too.
+              </>
+            )}
+          </p>
+          <ul className="contact-methods">
+            {profile.email && (
+              <li>
+                <span className="method-icon">
+                  <Icon name="mail" />
+                </span>
+                <a href={`mailto:${profile.email}`}>{profile.email}</a>
+              </li>
+            )}
+            {profile.location && (
+              <li>
+                <span className="method-icon">
+                  <Icon name="pin" />
+                </span>
+                {profile.location}
+              </li>
+            )}
+          </ul>
+          <PaperPlane />
+        </Reveal>
+        <Reveal as="form" className="card form spot" variant="scale" delay={STAGGER * 2} onSubmit={submit} noValidate>
+          <div className="row">
+            <label>
+              Name
+              <input name="name" value={form.name} onChange={update} required autoComplete="name" />
+              {fieldError('name')}
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" value={form.email} onChange={update} required autoComplete="email" />
+              {fieldError('email')}
+            </label>
+          </div>
           <label>
-            Name
-            <input name="name" value={form.name} onChange={update} required autoComplete="name" />
-            {fieldError('name')}
+            Message
+            <textarea name="body" rows={6} value={form.body} onChange={update} required />
+            {fieldError('body')}
           </label>
-          <label>
-            Email
-            <input name="email" type="email" value={form.email} onChange={update} required autoComplete="email" />
-            {fieldError('email')}
+          <label className="honeypot" aria-hidden="true">
+            Website
+            <input name="website" value={form.website} onChange={update} tabIndex={-1} autoComplete="off" />
           </label>
-        </div>
-        <label>
-          Message
-          <textarea name="body" rows={5} value={form.body} onChange={update} required />
-          {fieldError('body')}
-        </label>
-        <label className="honeypot" aria-hidden="true">
-          Website
-          <input name="website" value={form.website} onChange={update} tabIndex={-1} autoComplete="off" />
-        </label>
-        <button className="btn btn-primary" disabled={status.state === 'sending'}>
-          {status.state === 'sending' ? 'Sending…' : 'Send message'}
-        </button>
-        {status.state === 'sent' && <p className="notice success pop">Thanks! Your message was sent.</p>}
-        {status.state === 'error' && <p className="notice error pop">{status.message}</p>}
-      </Reveal>
+          <button className="btn btn-primary" disabled={status.state === 'sending'}>
+            {status.state === 'sending' ? 'Sending…' : 'Send message'} <Icon name="send" />
+          </button>
+          {status.state === 'sent' && <p className="notice success pop">Thanks! Your message was sent.</p>}
+          {status.state === 'error' && <p className="notice error pop">{status.message}</p>}
+        </Reveal>
+      </div>
     </section>
   );
 }
@@ -348,17 +482,18 @@ export default function Home() {
   if (!data) return <div className="center-screen muted">Loading…</div>;
 
   const { profile, projects, experience, skills, stats } = data;
+  const number = (id) => sections.indexOf(id) + 1;
 
   return (
     <>
       <SiteNav profile={profile} sections={sections} active={active} onHome />
-      <main id="top">
-        <Hero profile={profile} />
+      <main id="top" onPointerMove={spotlight}>
+        <Hero profile={profile} skills={skills} />
         <Stats stats={stats} />
-        <About profile={profile} skills={skills} />
-        <Projects projects={projects} />
-        <Experience items={experience} />
-        <Contact profile={profile} />
+        <About n={number('about')} profile={profile} skills={skills} />
+        <Projects n={number('projects')} projects={projects} />
+        <Experience n={number('experience')} items={experience} />
+        <Contact n={number('contact')} profile={profile} />
       </main>
       <SiteFooter profile={profile} sections={sections} onHome />
     </>
