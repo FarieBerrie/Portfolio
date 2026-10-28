@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, auth } from '../api.js';
-import { HeroBackdrop } from '../components/Graphics.jsx';
+import { SpaceBackdrop } from '../components/Space.jsx';
 import Reveal from '../components/Reveal.jsx';
 
 export default function Login() {
@@ -25,8 +25,8 @@ export default function Login() {
   }
 
   return (
-    <div className="center-screen backdrop-screen ink">
-      <HeroBackdrop />
+    <div className="center-screen backdrop-screen">
+      <SpaceBackdrop dim={0.45} />
       <Reveal as="form" className="card form login" variant="scale" onSubmit={submit}>
         <h1>Admin sign in</h1>
         <label>

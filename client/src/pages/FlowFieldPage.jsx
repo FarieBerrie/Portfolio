@@ -146,6 +146,7 @@ export default function FlowFieldPage() {
         <canvas
           ref={canvasRef}
           className="ff-canvas"
+          data-no-glitch // painting maps the pointer to the canvas's position, so it must hold still
           role="img"
           aria-label={`Animated flow field${settings.kaleidoscope ? `, kaleidoscope view with ${settings.segments} segments` : ''}. Drag to paint particles.`}
           onPointerDown={pointer((x, y, e) => {

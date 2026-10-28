@@ -6,6 +6,7 @@ import Admin from './pages/Admin.jsx';
 import ProjectPage from './pages/ProjectPage.jsx';
 import FlowFieldPage from './pages/FlowFieldPage.jsx';
 import { auth } from './api.js';
+import { useGlitchHover } from './components/glitch.js';
 
 function RequireAuth({ children }) {
   return auth.token ? children : <Navigate to="/admin/login" replace />;
@@ -22,6 +23,10 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  // Everything on the public pages glitches on hover; the admin is a work tool, so it stays still.
+  const { pathname } = useLocation();
+  useGlitchHover(!pathname.startsWith('/admin'));
+
   return (
     <>
       <ScrollToTop />

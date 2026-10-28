@@ -47,29 +47,18 @@ export function useInView() {
   return [ref, inView];
 }
 
-/** Scroll progress through the page, 0–1. */
-export function useScrollProgress() {
-  const [progress, setProgress] = useState(0);
+/** True while the media query matches, following changes live. */
+export function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia?.(query).matches ?? false);
   useEffect(() => {
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      setProgress(max > 0 ? Math.min(1, window.scrollY / max) : 0);
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-    };
-  }, []);
-  return progress;
+    const media = window.matchMedia?.(query);
+    if (!media) return;
+    const onChange = () => setMatches(media.matches);
+    onChange();
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
 }
 
 /** Returns the id of the section currently in the middle of the viewport, for highlighting nav links. */

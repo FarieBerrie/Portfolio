@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getPortfolio } from '../api.js';
-import { HeroBackdrop, ProjectArt } from '../components/Graphics.jsx';
+import { ProjectArt } from '../components/Graphics.jsx';
+import { SpaceBackdrop } from '../components/Space.jsx';
 import Icon from '../components/Icons.jsx';
 import Reveal, { spotlight } from '../components/Reveal.jsx';
 import { ExternalLink, SiteFooter, SiteNav, sectionsFor } from '../components/SiteChrome.jsx';
@@ -63,6 +64,7 @@ export default function ProjectPage() {
   if (!project) {
     return (
       <>
+        <SpaceBackdrop dim={0.55} />
         <SiteNav profile={profile} sections={sections} />
         <main className="container center-screen not-found">
           <Reveal className="card form" variant="scale">
@@ -82,11 +84,11 @@ export default function ProjectPage() {
 
   return (
     <>
+      <SpaceBackdrop dim={0.55} />
       <SiteNav profile={profile} sections={sections} />
       {/* Keyed by project so moving to the next/previous project replays the entrance */}
       <main key={project.id} onPointerMove={spotlight}>
-        <div className="hero-wrap project-hero ink">
-          <HeroBackdrop />
+        <div className="project-hero">
           <div className="container">
             <Reveal as={Link} to="/#projects" className="back-link" variant="fade">
               <Icon name="arrowLeft" /> All projects

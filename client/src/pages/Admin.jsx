@@ -5,7 +5,6 @@ import { resourceForms } from '../admin/config.js';
 import ProfileEditor from '../admin/ProfileEditor.jsx';
 import ResourceEditor from '../admin/ResourceEditor.jsx';
 import Messages from '../admin/Messages.jsx';
-import { ThemeToggle } from '../components/SiteChrome.jsx';
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
@@ -52,7 +51,6 @@ export default function Admin() {
           <span className="brand">Portfolio admin</span>
           <nav>
             <Link to="/">View site</Link>
-            <ThemeToggle />
             {user && <span className="muted small-text hide-sm">{user.email}</span>}
             <button className="btn btn-small" onClick={logout}>
               Log out
