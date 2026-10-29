@@ -95,11 +95,88 @@ function migrate(db) {
   }
 }
 
+// Runs once per database. seedIfEmpty only fills a brand-new file, and the live
+// portfolio is already filled from the admin dashboard, so Django has to be
+// inserted on startup or a deploy would never show it. Recorded in
+// applied_migrations so deleting the skill later is left alone.
+const DJANGO_MIGRATION = 'skill-django-backend';
+const BACKEND_ANCHORS = new Set(['node.js', 'express', 'rest apis', 'jwt authentication']);
+
+function ensureMigrationsTable(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS applied_migrations (
+    id         TEXT PRIMARY KEY,
+    applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+}
+
+function categoryMatching(skills, matches) {
+  const counts = new Map();
+  for (const skill of matches) {
+    const category = skill.category ?? '';
+    counts.set(category, (counts.get(category) || 0) + 1);
+  }
+  let chosen = '';
+  let best = -1;
+  for (const [category, count] of counts) {
+    if (count > best) {
+      chosen = category;
+      best = count;
+    }
+  }
+  return skills.filter((skill) => (skill.category ?? '') === chosen);
+}
+
+function backendSkills(skills) {
+  const anchored = skills.filter((skill) => BACKEND_ANCHORS.has(skill.name.trim().toLowerCase()));
+  if (anchored.length) return categoryMatching(skills, anchored);
+  const backend = skills.filter((skill) => /back[\s-]*end/i.test(skill.category || ''));
+  if (backend.length) return categoryMatching(skills, backend);
+  const frameworks = skills.filter((skill) => /framework/i.test(skill.category || ''));
+  if (frameworks.length) return categoryMatching(skills, frameworks);
+  return [];
+}
+
+function ensureDjangoSkill(db) {
+  ensureMigrationsTable(db);
+  if (db.prepare('SELECT id FROM applied_migrations WHERE id = ?').get(DJANGO_MIGRATION)) return;
+
+  const skills = db.prepare('SELECT id, name, category, sort_order FROM skills ORDER BY sort_order, id').all();
+  const already = skills.some((skill) => skill.name.trim().toLowerCase() === 'django');
+  // No rows yet means seedIfEmpty is about to list Django itself. Leave the
+  // migration unmarked so this function can record it once real rows exist.
+  if (!skills.length) return;
+
+  db.exec('BEGIN');
+  try {
+    if (!already) {
+      const group = backendSkills(skills);
+      let category = 'Backend';
+      let sortOrder = skills.reduce((max, skill) => Math.max(max, skill.sort_order), -1) + 1;
+      if (group.length) {
+        const last = group.reduce((a, b) => (b.sort_order >= a.sort_order ? b : a));
+        category = last.category ?? '';
+        const inCategory = skills.filter((skill) => (skill.category ?? '') === category);
+        sortOrder = inCategory.reduce((max, skill) => Math.max(max, skill.sort_order), last.sort_order) + 1;
+      }
+      if (db.prepare('SELECT id FROM skills WHERE sort_order = ?').get(sortOrder)) {
+        db.prepare('UPDATE skills SET sort_order = sort_order + 1 WHERE sort_order >= ?').run(sortOrder);
+      }
+      insertRow(db, 'skills', { name: 'Django', category, sort_order: sortOrder });
+    }
+    db.prepare('INSERT INTO applied_migrations (id) VALUES (?)').run(DJANGO_MIGRATION);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
 export function openDb(file) {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
   migrate(db);
+  ensureDjangoSkill(db);
   return db;
 }
 
@@ -190,7 +267,7 @@ export function seedIfEmpty(db) {
 
     const skills = {
       Frontend: ['React', 'JavaScript', 'HTML & CSS'],
-      Backend: ['Node.js', 'Express', 'REST APIs'],
+      Backend: ['Node.js', 'Express', 'REST APIs', 'Django'],
       Data: ['SQL', 'SQLite'],
       Tools: ['Git', 'Vite'],
     };

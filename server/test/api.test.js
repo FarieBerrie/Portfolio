@@ -212,6 +212,71 @@ describe('migrations', () => {
     db.close();
     rmSync(dir, { recursive: true, force: true });
   });
+
+  test('seed lists Django with the other back-end skills', () => {
+    const db = openDb(':memory:');
+    assert.equal(seedIfEmpty(db), true);
+    const backend = db
+      .prepare(`SELECT name FROM skills WHERE category = 'Backend' ORDER BY sort_order, id`)
+      .all()
+      .map((row) => row.name);
+    assert.deepEqual(backend, ['Node.js', 'Express', 'REST APIs', 'Django']);
+    db.close();
+  });
+
+  test('adds Django once, after the existing back-end skills', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { DatabaseSync } = await import('node:sqlite');
+
+    const dir = mkdtempSync(join(tmpdir(), 'portfolio-django-'));
+    const file = join(dir, 'live.db');
+    const old = new DatabaseSync(file);
+    old.exec(`CREATE TABLE skills (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )`);
+    const insert = old.prepare('INSERT INTO skills (name, category, sort_order) VALUES (?, ?, ?)');
+    for (const row of [
+      ['JavaScript', 'Languages', 0],
+      ['React', 'Front End', 7],
+      ['Node.js', 'Back End', 10],
+      ['Express', 'Back End', 11],
+      ['REST APIs', 'Back End', 12],
+      ['JWT Authentication', 'Back End', 13],
+      ['SQLite', 'Databases', 14],
+      ['Git', 'Tools & Practices', 18],
+      ['C++', 'Languages', 23],
+    ]) insert.run(...row);
+    old.close();
+
+    const opened = openDb(file);
+    const first = opened.prepare('SELECT name, category, sort_order FROM skills ORDER BY sort_order, id').all();
+    assert.deepEqual(
+      first.map((row) => row.name),
+      ['JavaScript', 'React', 'Node.js', 'Express', 'REST APIs', 'JWT Authentication', 'Django', 'SQLite', 'Git', 'C++'],
+    );
+    assert.equal(first.find((row) => row.name === 'Django').category, 'Back End');
+    assert.deepEqual(
+      first.filter((row) => row.name !== 'Django').map((row) => row.name),
+      ['JavaScript', 'React', 'Node.js', 'Express', 'REST APIs', 'JWT Authentication', 'SQLite', 'Git', 'C++'],
+    );
+    opened.close();
+
+    const again = openDb(file);
+    assert.deepEqual(again.prepare('SELECT name, category, sort_order FROM skills ORDER BY sort_order, id').all(), first);
+    again.prepare(`DELETE FROM skills WHERE name = 'Django'`).run();
+    again.close();
+
+    const afterDelete = openDb(file);
+    const remaining = afterDelete.prepare('SELECT name FROM skills ORDER BY sort_order, id').all().map((row) => row.name);
+    assert.equal(remaining.includes('Django'), false);
+    afterDelete.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
 });
 
 describe('static files', () => {
